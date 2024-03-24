@@ -65,15 +65,11 @@ function App() {
       <Drawer isOpen placement="left" onClose={noop}>
         <DrawerContent>
           <DrawerHeader>Hello!</DrawerHeader>
-          <DrawerBody>
-            <Stack spacing={4} direction="column" align="left">
-              <Button colorScheme="teal" size="md" onClick={onFindMeHandler}>
-                Find me!
-              </Button>
-            </Stack>
-          </DrawerBody>
+          <DrawerBody>TODO</DrawerBody>
           <DrawerFooter>
-            <p>Footer</p>
+            <Button colorScheme="teal" size="md" onClick={onFindMeHandler}>
+              Find me!
+            </Button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
