@@ -4,8 +4,6 @@ import { Map } from "ol";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
 import View from "ol/View";
-import { defaults } from "ol/control/defaults";
-import { defaults as interactionDefaults } from "ol/interaction/defaults";
 
 const osmBaseLayer = new TileLayer({
   visible: true,
@@ -19,8 +17,6 @@ export const map = new Map({
     center: [0, 0],
     zoom: 2,
   }),
-  controls: defaults(),
-  interactions: interactionDefaults({}),
 });
 
 export function useMap() {
@@ -28,5 +24,8 @@ export function useMap() {
   if (!mapRef.current) {
     mapRef.current = map;
   }
-  return mapRef.current;
+
+  return {
+    map: mapRef.current,
+  };
 }
