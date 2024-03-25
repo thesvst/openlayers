@@ -1,15 +1,14 @@
-import React, {
-  forwardRef,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "react";
+import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import styled from "styled-components";
 import OLMap from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
 import VectorLayer from "ol/layer/Vector";
+import Draw from "ol/interaction/Draw";
+import { fromLonLat } from "ol/proj";
+
+type Interaction = Draw;
 
 export interface Layer {
   id: string;
@@ -22,21 +21,24 @@ export interface MapRefAPI {
   findAllLayers(): Layer[];
   removeLayer(id: string): void;
   getLayer(id: string): Layer | null;
+  addInteraction(interaction: Interaction): void;
+  removeInteraction(interaction: Interaction): void;
 }
 
-const getDefaultLayer = () => new TileLayer({ source: new OSM() });
-const getDefaultView = () => new View({ center: [0, 0], zoom: 2 });
+const getDefaultLayer = () =>
+  new TileLayer({ visible: true, source: new OSM() });
+const getDefaultView = () => new View({ center: fromLonLat([0, 0]), zoom: 2 });
 
 export const MainMap = forwardRef((props, ref) => {
   const mapElementRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<OLMap | null>(null);
+  const OLMapRef = useRef<OLMap | null>(null);
   const [layers, setLayers] = useState<Map<any, VectorLayer<any>>>(new Map());
 
   useImperativeHandle(
     ref,
     (): MapRefAPI => ({
       init() {
-        if (map) return;
+        if (OLMapRef.current) return;
         if (!mapElementRef.current) return;
 
         const newMap = new OLMap({
@@ -45,13 +47,13 @@ export const MainMap = forwardRef((props, ref) => {
           view: getDefaultView(),
         });
 
-        setMap(newMap);
+        OLMapRef.current = newMap;
       },
       addLayer(payload: Layer) {
-        if (!map) return;
+        if (!OLMapRef.current) return;
 
         layers.set(payload.id, payload.layer);
-        map.addLayer(payload.layer);
+        OLMapRef.current.addLayer(payload.layer);
         setLayers(new Map(layers));
       },
       findAllLayers() {
@@ -68,11 +70,19 @@ export const MainMap = forwardRef((props, ref) => {
       },
       removeLayer(id: string) {
         const layerToRemove = layers.get(id);
-        if (!layerToRemove || !map) return;
+        if (!layerToRemove || !OLMapRef.current) return;
 
-        map.removeLayer(layerToRemove);
+        OLMapRef.current.removeLayer(layerToRemove);
         layers.delete(id);
         setLayers(new Map(layers));
+      },
+      addInteraction(interaction: Interaction) {
+        if (!OLMapRef.current) return;
+        OLMapRef.current.addInteraction(interaction);
+      },
+      removeInteraction(interaction: Interaction) {
+        if (!OLMapRef.current) return;
+        OLMapRef.current.removeInteraction(interaction);
       },
     })
   );

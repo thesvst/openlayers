@@ -14,11 +14,12 @@ import {
 } from "@chakra-ui/react";
 import { noop } from "../../utils/noop";
 import { DeleteIcon } from "@chakra-ui/icons";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Layer, MapRefAPI } from "../MainMap";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import { genId } from "../../utils/genId";
+import Draw from "ol/interaction/Draw";
 
 interface DrawerProps {
   mapRef: React.RefObject<MapRefAPI | null>;
@@ -27,6 +28,7 @@ interface DrawerProps {
 export const Drawer = (props: DrawerProps) => {
   const [layers, setLayers] = useState<Layer[]>([]);
   const [activeLayer, setActiveLayer] = useState<string | null>(null);
+  const drawRef = useRef<Draw | null>(null);
 
   const onFindMeHandler = () => {};
 
@@ -50,11 +52,36 @@ export const Drawer = (props: DrawerProps) => {
 
   const onSetActiveLayerHandler = (id: string) => {
     setActiveLayer(id);
+
+    if (!drawRef.current || !props.mapRef.current) return;
+    props.mapRef.current.removeInteraction(drawRef.current);
+    drawRef.current = null;
   };
 
-  const onStartDrawingHandler = () => {};
+  const onStartDrawingHandler = () => {
+    if (!props.mapRef.current || !activeLayer) {
+      alert("No active layer selected!");
+      return;
+    }
 
-  const onStopDrawingHandler = () => {};
+    const activeLayerData = layers.find((layer) => layer.id === activeLayer);
+    if (!activeLayerData) return;
+
+    const source = activeLayerData.layer.getSource();
+    const interaction = new Draw({ source, type: "Polygon" });
+    drawRef.current = interaction;
+
+    if (drawRef.current) {
+      props.mapRef.current.addInteraction(drawRef.current);
+    }
+  };
+
+  const onStopDrawingHandler = () => {
+    if (!props.mapRef.current || !drawRef.current) return;
+
+    props.mapRef.current.removeInteraction(drawRef.current);
+    drawRef.current = null;
+  };
 
   return (
     <ChakraDrawer isOpen placement="left" onClose={noop}>
