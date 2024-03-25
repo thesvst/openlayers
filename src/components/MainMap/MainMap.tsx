@@ -11,11 +11,17 @@ import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
 import VectorLayer from "ol/layer/Vector";
 
+export interface Layer {
+  id: string;
+  layer: VectorLayer<any>;
+}
+
 export interface MapRefAPI {
   init(): void;
-  addLayer(id: string, layer: VectorLayer<any>): void;
-  findAllLayers(): VectorLayer<any>[];
+  addLayer(payload: Layer): void;
+  findAllLayers(): Layer[];
   removeLayer(id: string): void;
+  getLayer(id: string): Layer | null;
 }
 
 const getDefaultLayer = () => new TileLayer({ source: new OSM() });
@@ -41,15 +47,24 @@ export const MainMap = forwardRef((props, ref) => {
 
         setMap(newMap);
       },
-      addLayer(id: string, layer: VectorLayer<any>) {
+      addLayer(payload: Layer) {
         if (!map) return;
 
-        layers.set(id, layer);
-        map.addLayer(layer);
+        layers.set(payload.id, payload.layer);
+        map.addLayer(payload.layer);
         setLayers(new Map(layers));
       },
       findAllLayers() {
-        return Array.from(layers.values());
+        return Array.from(layers.entries()).map(([id, layer]) => ({
+          id,
+          layer,
+        }));
+      },
+      getLayer(id: string) {
+        const layer = layers.get(id);
+        if (!layer) return null;
+
+        return { id, layer };
       },
       removeLayer(id: string) {
         const layerToRemove = layers.get(id);

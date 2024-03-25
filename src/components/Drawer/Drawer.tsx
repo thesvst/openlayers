@@ -1,4 +1,3 @@
-//@ts-nocheck
 import {
   Box,
   Button,
@@ -16,16 +15,17 @@ import {
 import { noop } from "../../utils/noop";
 import { DeleteIcon } from "@chakra-ui/icons";
 import { useState } from "react";
-import { MapRefAPI } from "../MainMap";
+import { Layer, MapRefAPI } from "../MainMap";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
+import { genId } from "../../utils/genId";
 
 interface DrawerProps {
   mapRef: React.RefObject<MapRefAPI | null>;
 }
 
 export const Drawer = (props: DrawerProps) => {
-  const [layers, setLayers] = useState<VectorLayer<any>[]>([]);
+  const [layers, setLayers] = useState<Layer[]>([]);
   const [activeLayer, setActiveLayer] = useState<string | null>(null);
 
   const onFindMeHandler = () => {};
@@ -33,13 +33,15 @@ export const Drawer = (props: DrawerProps) => {
   const onCreateLayerHandler = () => {
     if (!props.mapRef.current) return;
 
+    const id = genId();
     const layer = new VectorLayer({ source: new VectorSource() });
-    props.mapRef.current.addLayer(layer.ol_uid, layer);
+    props.mapRef.current.addLayer({ id, layer });
     setLayers(props.mapRef.current.findAllLayers());
   };
 
   const onDeleteLayerHandler = (id: string) => {
     if (!props.mapRef.current) return;
+
     if (id === activeLayer) setActiveLayer(null);
 
     props.mapRef.current.removeLayer(id);
@@ -64,27 +66,25 @@ export const Drawer = (props: DrawerProps) => {
         <DrawerBody>
           <VStack align="flex-start">
             <VStack spacing={4} overflowY="auto" height="200px">
-              {layers.map((layer, index) => {
+              {layers.map((data, index) => {
                 return (
-                  <Box key={layer.ol_uid}>
+                  <Box key={data.id}>
                     <HStack>
                       <Tag
-                        onClick={() => onSetActiveLayerHandler(layer.ol_uid)}
+                        onClick={() => onSetActiveLayerHandler(data.id)}
                         flexShrink="0"
                         size="md"
                         cursor="pointer"
                         key={index}
                         borderRadius="full"
                         variant="solid"
-                        colorScheme={
-                          layer.ol_uid === activeLayer ? "green" : "teal"
-                        }
+                        colorScheme={data.id === activeLayer ? "green" : "teal"}
                       >
-                        <TagLabel>Layer ID: {layer.ol_uid}</TagLabel>
+                        <TagLabel>Layer ID: {data.id}</TagLabel>
                       </Tag>
                       <DeleteIcon
                         onClick={() => {
-                          onDeleteLayerHandler(layer.ol_uid);
+                          onDeleteLayerHandler(data.id);
                         }}
                       />
                     </HStack>
