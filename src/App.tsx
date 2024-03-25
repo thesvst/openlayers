@@ -23,30 +23,29 @@ import { noop } from "./utils/noop";
 import { useMap } from "./hooks/useMap";
 import { fromLonLat } from "ol/proj";
 import { Feature } from "ol";
+import { Draw } from "ol/interaction";
 import { circular } from "ol/geom/Polygon";
 import { Point } from "ol/geom";
 import VectorSource from "ol/source/Vector";
 import VectorLayer from "ol/layer/Vector";
-import { genId } from "./hooks/genId";
 import { DeleteIcon } from "@chakra-ui/icons";
-
-interface MapLayer {
-  layer: any;
-  id: string;
-}
+import { useLayers } from "./hooks/useLayers";
 
 function App() {
   const [activeLayer, setActiveLayer] = React.useState<string | null>(null);
-  const [layers, setLayers] = React.useState<MapLayer[]>([]); // TODO: Refactor to map
+  const [draw, setDraw] = React.useState<Draw | null>(null);
   const mapRef = React.useRef<HTMLDivElement>(null);
   const { map } = useMap();
+  const { addLayer, deleteLayer, layers, getLayer } = useLayers(map);
+
 
   React.useEffect(() => {
+    console.log("Asasda");
     if (mapRef.current) {
       map.setTarget(mapRef.current);
       map.updateSize();
     }
-  }, [map]);
+  }, [map, layers]);
 
   const onFindMeHandler = () => {
     // TODO: Source should be global to be able to remove it later
@@ -78,30 +77,39 @@ function App() {
   };
 
   const onCreateLayerHandler = () => {
-    const source = new VectorSource();
-    const layer = new VectorLayer({
-      source: source,
-    });
-    map.addLayer(layer);
-
-    setLayers([...layers, { layer, id: genId() }]);
+    addLayer();
   };
 
   const onDeleteLayerHandler = (id: string) => {
     if (activeLayer === id) setActiveLayer(null);
 
-    const layer = layers.find((data) => data.id === id);
-    if (!layer) return;
-
-    map.removeLayer(layer.layer);
-
-    const newLayers = layers.filter((data) => data.id !== id);
-    setLayers(newLayers);
+    deleteLayer(id);
   };
 
   const onSetActiveLayerHandler = (id: string) => {
     setActiveLayer(id);
   };
+
+  const onStartDrawingHandler = () => {
+    if (!activeLayer) {
+      alert("Select layer first!");
+      return;
+    }
+
+    const layer = getLayer(activeLayer);
+    setDraw(
+      new Draw({
+        source: layer?.getSource(),
+        type: "Polygon",
+      })
+    );
+
+    if (draw) {
+      map.addInteraction(draw);
+    }
+  };
+
+  const onStopDrawingHandler = () => {};
 
   return (
     <ChakraProvider>
@@ -114,40 +122,56 @@ function App() {
           <DrawerBody>
             <VStack align="flex-start">
               <VStack spacing={4} overflowY="auto" height="200px">
-                {layers.map((data, index) => (
-                  <Box key={data.id}>
-                    <HStack>
-                      <Tag
-                        onClick={() => onSetActiveLayerHandler(data.id)}
-                        flexShrink="0"
-                        size="md"
-                        cursor="pointer"
-                        key={index}
-                        borderRadius="full"
-                        variant="solid"
-                        colorScheme={"green"}
-                      >
-                        <TagLabel>Layer: {data.id}</TagLabel>
-                      </Tag>
-                      <DeleteIcon
-                        onClick={() => onDeleteLayerHandler(data.id)}
-                      />
-                    </HStack>
-                  </Box>
-                ))}
+                {Array.from(layers).map(([id], index) => {
+                  return (
+                    <Box key={id}>
+                      <HStack>
+                        <Tag
+                          onClick={() => onSetActiveLayerHandler(id)}
+                          flexShrink="0"
+                          size="md"
+                          cursor="pointer"
+                          key={index}
+                          borderRadius="full"
+                          variant="solid"
+                          colorScheme={"green"}
+                        >
+                          <TagLabel>Layer: {id}</TagLabel>
+                        </Tag>
+                        <DeleteIcon onClick={() => onDeleteLayerHandler(id)} />
+                      </HStack>
+                    </Box>
+                  );
+                })}
               </VStack>
               <FormControl>
-                <HStack>
-                  <Button
-                    colorScheme="teal"
-                    size="md"
-                    onClick={onCreateLayerHandler}
-                  >
-                    Create Layer
-                  </Button>
-                </HStack>
+                <Button
+                  colorScheme="teal"
+                  size="md"
+                  onClick={onCreateLayerHandler}
+                >
+                  Create Layer
+                </Button>
               </FormControl>
             </VStack>
+            <Box style={{ marginTop: 15 }}>
+              <HStack>
+                <Button
+                  colorScheme="teal"
+                  size="md"
+                  onClick={onStartDrawingHandler}
+                >
+                  Start Drawing
+                </Button>
+                <Button
+                  colorScheme="teal"
+                  size="md"
+                  onClick={onStopDrawingHandler}
+                >
+                  Stop Drawing
+                </Button>
+              </HStack>
+            </Box>
           </DrawerBody>
           <DrawerFooter>
             <Button colorScheme="teal" size="md" onClick={onFindMeHandler}>
